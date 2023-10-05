@@ -42,7 +42,7 @@ class SSTImapFormatter(logging.Formatter):
 
 
 if not os.path.isdir(utils.config.base_path):
-    os.makedirs(utils.config.base_path)
+    os.makedirs(utils.config.base_path, exist_ok=True)
 
 """Initialize the handler to dump log to files"""
 log_path = os.path.join(utils.config.base_path, 'sstimap.log')

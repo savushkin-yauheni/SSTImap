@@ -103,6 +103,8 @@ payload.add_argument("-s", "--os-shell", dest="os_shell", action="store_const", 
                      help="Prompt for an interactive operating system shell")
 payload.add_argument("-S", "--os-cmd", dest="os_cmd",
                      help="Execute an operating system command")
+payload.add_argument("-sp", "--param", dest="param",
+                     help="Specific param")
 payload.add_argument("-B", "--bind-shell", dest="bind_shell", nargs=1, type=int, metavar="PORT",
                      help="Spawn a system shell on a TCP PORT of the target and connect to it")
 payload.add_argument("-R", "--reverse-shell", dest="reverse_shell", nargs=2, metavar=("HOST", "PORT",),

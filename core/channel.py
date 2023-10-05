@@ -32,14 +32,17 @@ class Channel:
         self._parse_header()
         self._parse_cookies(self.args.get('cookies', []))
         if not self.injs:
-            self._parse_get(all_injectable=True)
-            self._parse_post(all_injectable=True)
-            self._parse_header(all_injectable=True)
-            self._parse_cookies(self.args.get('cookies', []), all_injectable=True)
+            if 'param' in args and args.get('param'):
+                self.injs.append({'field': 'GET', 'part': 'value', 'param': args.get('param'), 'value': '1', 'idx': 0})
+            else:
+                self._parse_get(all_injectable=True)
+                self._parse_post(all_injectable=True)
+                self._parse_header(all_injectable=True)
+                self._parse_cookies(self.args.get('cookies', []), all_injectable=True)
         self._parse_method()
         if not self.args.get('verify_ssl'):
             urllib3.disable_warnings()
-        
+
     def _parse_method(self):
         if self.args.get('method'):
             self.http_method = self.args.get('method')
@@ -76,10 +79,10 @@ class Channel:
                     self.injs.append({'field': 'Cookie', 'part': 'param', 'param': param})
                 if self.tag in value or all_injectable:
                     self.injs.append({'field': 'Cookie', 'part': 'value', 'value': value, 'param': param})
-            #cookie_string = f"Cookie: {';'.join(cookies)}"
-            #if not self.args.get('headers'):
+            # cookie_string = f"Cookie: {';'.join(cookies)}"
+            # if not self.args.get('headers'):
             #    self.args['headers'] = []
-            #self.args['headers'].append(cookie_string)
+            # self.args['headers'].append(cookie_string)
 
     def _parse_header(self, all_injectable=False):
         headers = []
@@ -110,7 +113,7 @@ class Channel:
                 for idx, value in enumerate(value_list):
                     if self.tag in value or all_injectable:
                         self.injs.append({'field': 'POST', 'part': 'value', 'value': value, 'param': param, 'idx': idx})
-            
+
     def _parse_get(self, all_injectable=False):
         params_dict_list = parse.parse_qs(parse.urlsplit(self.url).query, keep_blank_values=True)
         for param, value_list in params_dict_list.items():
@@ -120,7 +123,7 @@ class Channel:
             for idx, value in enumerate(value_list):
                 if self.tag in value or all_injectable:
                     self.injs.append({'field': 'GET', 'part': 'value', 'param': param, 'value': value, 'idx': idx})
-            
+
     def req(self, injection):
         get_params = deepcopy(self.get_params)
         post_params = deepcopy(self.post_params)
@@ -130,7 +133,7 @@ class Channel:
         inj = deepcopy(self.injs[self.inj_idx])
         if inj['field'] == 'URL':
             position = inj['position']
-            url_params = self.base_url[:position] + injection + self.base_url[position+1:]
+            url_params = self.base_url[:position] + injection + self.base_url[position + 1:]
         elif inj['field'] == 'POST':
             if inj.get('part') == 'param':
                 old_value = post_params[inj.get('param')]
@@ -142,7 +145,8 @@ class Channel:
                 post_params[new_param] = old_value
             if inj.get('part') == 'value':
                 if self.tag in post_params[inj.get('param')][inj.get('idx')]:
-                    post_params[inj.get('param')][inj.get('idx')] = post_params[inj.get('param')][inj.get('idx')].replace(self.tag, injection)
+                    post_params[inj.get('param')][inj.get('idx')] = post_params[inj.get('param')][
+                        inj.get('idx')].replace(self.tag, injection)
                 else:
                     post_params[inj.get('param')][inj.get('idx')] = injection
         elif inj['field'] == 'GET':
@@ -156,7 +160,8 @@ class Channel:
                 get_params[new_param] = old_value
             if inj.get('part') == 'value':
                 if self.tag in get_params[inj.get('param')][inj.get('idx')]:
-                    get_params[inj.get('param')][inj.get('idx')] = get_params[inj.get('param')][inj.get('idx')].replace(self.tag, injection)
+                    get_params[inj.get('param')][inj.get('idx')] = get_params[inj.get('param')][inj.get('idx')].replace(
+                        self.tag, injection)
                 else:
                     get_params[inj.get('param')][inj.get('idx')] = injection
         elif inj['field'] == 'Header':
@@ -208,9 +213,16 @@ class Channel:
         if self.args['delay']:
             time.sleep(self.args['delay'])
         try:
-            result = requests.request(method=self.http_method, url=url_params, params=get_params, data=post_params,
-                                      headers=header_params, cookies=cookie_params, proxies=self.proxies,
-                                      verify=self.args.get('verify_ssl')).text
+            session = requests.Session()
+            session.max_redirects = 5
+            result = session.request(method=self.http_method, url=url_params, params=get_params, data=post_params,
+                                     headers=header_params, cookies=cookie_params, proxies=self.proxies,
+                                     verify=self.args.get('verify_ssl')).text
+
+        except requests.exceptions.TooManyRedirects as tmr:
+            result = ""
+        except UnicodeDecodeError:
+            result = ""
         except requests.exceptions.ConnectionError as e:
             if e and e.args[0] and e.args[0].args[0] == 'Connection aborted.':
                 log.log(25, 'Error: connection aborted, bad status line.')

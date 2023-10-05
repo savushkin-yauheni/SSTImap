@@ -38,7 +38,7 @@ with open(f"{sys.path[0]}/config.json", 'r') as stream:
 
 base_path = os.path.expanduser(config.get("base_path", "~/.sstimap/"))
 if not os.path.isdir(base_path):
-    os.makedirs(base_path)
+    os.makedirs(base_path, exist_ok=True)
 
 if os.path.exists(f"{base_path}/config.json"):
     with open(f"{base_path}/config.json", 'r') as stream:
